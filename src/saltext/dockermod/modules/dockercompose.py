@@ -118,7 +118,6 @@ except ImportError:
     HAS_DOCKERCOMPOSE = False
 
 MIN_DOCKERCOMPOSE = (1, 5, 0)
-MAX_DOCKERCOMPOSE = (1, 6, 2)
 VERSION_RE = r'([\d.]+)'
 
 log = logging.getLogger(__name__)
@@ -133,8 +132,10 @@ def __virtual__():
         match = re.match(VERSION_RE, str(compose.__version__))
         if match:
             version = tuple([int(x) for x in match.group(1).split('.')])
-            if version >= MIN_DOCKERCOMPOSE and version <= MAX_DOCKERCOMPOSE:
+            if MIN_DOCKERCOMPOSE >= version:
                 return __virtualname__
+        else:
+            log.critical('Minimum version of docker-compose>=1.5.0')
     return (False, 'The dockercompose execution module not loaded: '
             'compose python library not available.')
 
