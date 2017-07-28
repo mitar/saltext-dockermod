@@ -129,4 +129,3 @@ class DockerNetworkTestCase(TestCase, LoaderModuleMockMixin):
                                'comment': 'Network \'network_foo\' already absent',
                                'changes': {},
                                'result': True})
-
