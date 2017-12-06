@@ -198,15 +198,13 @@ def __read_docker_compose_file(file_path):
         return __standardize_result(False,
                                     'Path {} is not present'.format(file_path),
                                     None, None)
-    f = salt.utils.files.fopen(file_path,
-                               'r')  # pylint: disable=resource-leakage
-    file_name = os.path.basename(file_path)
-    result = {file_name: ''}
-    if f:
-        for line in f:
-            result[file_name] += line
-        f.close()
-    else:
+    try:
+        with salt.utils.files.fopen(file_path, 'r') as fl:
+            file_name = os.path.basename(file_path)
+            result = {file_name: ''}
+            for line in fl:
+                result[file_name] += line
+    except EnvironmentError:
         return __standardize_result(False,
                                     'Could not read {0}'.format(file_path),
                                     None, None)
@@ -235,12 +233,10 @@ def __write_docker_compose(path, docker_compose):
         file_path = os.path.join(dir_name, DEFAULT_DC_FILENAMES[0])
     if os.path.isdir(dir_name) is False:
         os.mkdir(dir_name)
-    f = salt.utils.files.fopen(file_path,
-                               'w')  # pylint: disable=resource-leakage
-    if f:
-        f.write(docker_compose)
-        f.close()
-    else:
+    try:
+        with salt.utils.files.fopen(file_path, 'w') as fl:
+            fl.write(docker_compose)
+    except EnvironmentError:
         return __standardize_result(False,
                                     'Could not write {0}'.format(file_path),
                                     None, None)
@@ -280,6 +276,7 @@ def __load_project_from_file_path(file_path):
     except Exception as inst:
         return __handle_except(inst)
     return project
+
 
 def __handle_except(inst):
     '''
@@ -371,7 +368,10 @@ def create(path, docker_compose):
         return __standardize_result(False,
                                     'Creating a docker-compose project failed, you must send a valid docker-compose file',
                                     None, None)
-    return __standardize_result(True, 'Successfully created the docker-compose file', {'compose.base_dir': path}, None)
+    return __standardize_result(True,
+                                'Successfully created the docker-compose file',
+                                {'compose.base_dir': path},
+                                None)
 
 
 def pull(path, service_names=None):
