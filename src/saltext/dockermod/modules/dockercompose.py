@@ -268,8 +268,8 @@ def __dump_docker_compose(path, content):
     :return:
     '''
     try:
-        dumped = yaml.dump(content, indent=2, default_flow_style=False)
-        return __write_docker_compose(path, dumped)
+        dumped = yaml.safe_dump(content, indent=2, default_flow_style=False)
+        return __write_docker_compose(path, dumped, already_existed)
     except TypeError as t_err:
         msg = 'Could not dump {0} {1}'.format(content, t_err)
         return __standardize_result(False, msg,
