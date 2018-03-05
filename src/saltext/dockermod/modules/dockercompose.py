@@ -972,7 +972,8 @@ def service_remove(path, service_name):
                                     None, None)
     del services[service_name]
     return __dump_compose_file(path, compose_result,
-                               'Service {0} is removed from {1}'.format(service_name, path))
+                               'Service {0} is removed from {1}'.format(service_name, path),
+                               already_existed=True)
 
 
 def service_set_tag(path, service_name, tag):
