@@ -1157,10 +1157,11 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             'docker_container.run',
             name=name,
             image=self.image,
-            command=RUNTIME_VARS.SHELL_FALSE_PATH,
+            command='/bin/false',
             failhard=True)
         self.assertSaltFalseReturn(ret)
         ret = ret[next(iter(ret))]
+        log.critical('ret = %s', ret)
         self.assertEqual(ret['changes']['Logs'], '')
         self.assertTrue(
             ret['comment'].startswith(
@@ -1173,7 +1174,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             'docker_container.run',
             name=name,
             image=self.image,
-            command=RUNTIME_VARS.SHELL_FALSE_PATH,
+            command='/bin/false',
             failhard=False)
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
