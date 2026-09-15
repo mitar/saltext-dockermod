@@ -1,15 +1,15 @@
+#  pylint: disable=unrecognized-option
 import functools
 import logging
 import random
 
 import pytest
-from saltfactories.utils import random_string
-
 import salt.utils.files
 import salt.utils.network
 import salt.utils.path
 from salt._compat import ipaddress
 from salt.exceptions import CommandExecutionError
+from saltfactories.utils import random_string
 
 pytest.importorskip("docker")
 
@@ -42,9 +42,8 @@ class Network:
         try:
             return self.net[self._rand_indexes[index]].compressed
         except (TypeError, AttributeError):
-            raise ValueError(
-                "Indexing not supported for networks without a custom subnet"
-            )
+            #  pylint: disable-next=raise-missing-from
+            raise ValueError("Indexing not supported for networks without a custom subnet")
 
     @staticmethod
     def arg_map(arg_name):
@@ -104,6 +103,7 @@ class CreateNetwork:
 
 
 @pytest.fixture(scope="module")
+#  pylint: disable-next=unused-argument
 def container(salt_factories, state_tree):
 
     factory = salt_factories.get_container(
@@ -178,9 +178,7 @@ def test_absent_with_disconnected_container(
     assert ret.result is True
     assert ret.changes
     assert ret.changes == {"removed": True, "disconnected": [container.name]}
-    assert ret.comment == "Removed network '{}'".format(
-        existing_network_with_container.name
-    )
+    assert ret.comment == f"Removed network '{existing_network_with_container.name}'"
 
 
 def test_absent_when_not_present(network, docker_network):
@@ -233,9 +231,7 @@ def test_present_with_reconnect(network, docker, docker_network, container, reco
         docker.connect_container_to_network(container.name, net.name)
 
         # Change the driver to force the network to be replaced
-        ret = docker_network.present(
-            name=net.name, driver="macvlan", reconnect=reconnect
-        )
+        ret = docker_network.present(name=net.name, driver="macvlan", reconnect=reconnect)
         assert ret.result is True
         assert ret.changes
         assert ret.changes == {
@@ -248,9 +244,7 @@ def test_present_with_reconnect(network, docker, docker_network, container, reco
                 },
             },
         }
-        assert ret.comment == "Network '{}' was replaced with updated config".format(
-            net.name
-        )
+        assert ret.comment == f"Network '{net.name}' was replaced with updated config"
 
 
 def test_present_internal(network, docker, docker_network):
@@ -290,10 +284,7 @@ def test_present_enable_ipv6(network, docker, docker_network):
             assert net_info["EnableIPv6"] is True
 
 
-def test_present_attachable(network, docker, docker_network, grains):
-    if grains["os_family"] == "RedHat" and grains.get("osmajorrelease", 0) <= 7:
-        pytest.skip("Cannot reliably manage attachable on RHEL <= 7")
-
+def test_present_attachable(network, docker, docker_network):
     with network() as net:
         ret = docker_network.present(name=net.name, attachable=True)
         assert ret.result is True
@@ -322,11 +313,10 @@ def test_present_ingress(network, docker, docker_network):
         assert net_info["Ingress"] is True
 
 
+#  pylint: disable-next=unused-argument
 def test_present_with_custom_ipv4(network, docker, docker_network):
     # First run will test passing the IPAM arguments individually
-    with network(subnet="10.247.197.96/27") as net1, network(
-        subnet="10.247.197.128/27"
-    ) as net2:
+    with network(subnet="10.247.197.96/27") as net1, network(subnet="10.247.197.128/27") as net2:
         ret = docker_network.present(
             name=net1.name,
             subnet=net1.subnet,
@@ -357,16 +347,17 @@ def test_present_with_custom_ipv4(network, docker, docker_network):
         }
         assert ret.changes
         assert ret.changes == expected
-        assert ret.comment == "Network '{}' was replaced with updated config".format(
-            net1.name
-        )
+        assert ret.comment == f"Network '{net1.name}' was replaced with updated config"
 
 
 @pytest.mark.skipif(IPV6_ENABLED is False, reason="IPv6 not enabled")
+#  pylint: disable-next=unused-argument
 def test_present_with_custom_ipv6(network, docker, docker_network):
-    with network(subnet="10.247.197.96/27") as ipv4_net, network(
-        subnet="fe3f:2180:26:1::/123"
-    ) as ipv6_net1, network(subnet="fe3f:2180:26:1::20/123") as ipv6_net2:
+    with (
+        network(subnet="10.247.197.96/27") as ipv4_net,
+        network(subnet="fe3f:2180:26:1::/123") as ipv6_net1,
+        network(subnet="fe3f:2180:26:1::20/123") as ipv6_net2,
+    ):
         ret = docker_network.present(
             name=ipv4_net.name,
             enable_ipv6=True,
@@ -409,11 +400,10 @@ def test_present_with_custom_ipv6(network, docker, docker_network):
         }
         assert ret.changes
         assert ret.changes == expected
-        assert ret.comment == "Network '{}' was replaced with updated config".format(
-            ipv4_net.name
-        )
+        assert ret.comment == f"Network '{ipv4_net.name}' was replaced with updated config"
 
 
+#  pylint: disable-next=unused-argument
 def test_bridge_dupname_update(network, docker, docker_network):
     # com.docker.network.bridge.name can not have names over 15 chars. so grab the last 8
     with network(subnet="10.247.197.96/27") as net:
@@ -433,9 +423,6 @@ def test_bridge_dupname_update(network, docker, docker_network):
         )
         assert ret.result is True
         assert not ret.changes
-        assert (
-            ret.comment
-            == "Network '{}' already exists, and is configured as specified".format(
-                net.name
-            )
+        assert ret.comment == "Network '{}' already exists, and is configured as specified".format(
+            net.name
         )

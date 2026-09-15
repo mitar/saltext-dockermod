@@ -1,3 +1,4 @@
+#  pylint: disable=unrecognized-option
 """
 Management of Docker images
 
@@ -69,8 +70,11 @@ def present(
     dockerfile=None,
     sls=None,
     base="opensuse/python",
+    #  pylint: disable-next=unused-argument
     saltenv="base",
+    #  pylint: disable-next=unused-argument
     pillarenv=None,
+    #  pylint: disable-next=unused-argument
     pillar=None,
     **kwargs,
 ):
@@ -232,6 +236,7 @@ def present(
         # If building, we need the tag to be specified
         if not tag:
             ret["comment"] = (
+                #  pylint: disable-next=implicit-str-concat
                 "The 'tag' argument is required if any one of 'build', "
                 "'load', or 'sls' is used."
             )
@@ -301,19 +306,15 @@ def present(
     elif sls:
         _locals = locals()
         sls_build_kwargs = {
-            k: _locals[k]
-            for k in ("saltenv", "pillarenv", "pillar")
-            if _locals[k] is not None
+            k: _locals[k] for k in ("saltenv", "pillarenv", "pillar") if _locals[k] is not None
         }
         try:
             image_update = __salt__["docker.sls_build"](
                 repository=name, tag=tag, base=base, mods=sls, **sls_build_kwargs
             )
         except Exception as exc:  # pylint: disable=broad-except
-            ret["comment"] = (
-                "Encountered error using SLS {} for building {}: {}".format(
-                    sls, full_image, exc
-                )
+            ret["comment"] = "Encountered error using SLS {} for building {}: {}".format(
+                sls, full_image, exc
             )
             return ret
         if image_info is None or image_update["Id"] != image_info["Id"][:12]:
@@ -323,9 +324,7 @@ def present(
         try:
             image_update = __salt__["docker.load"](path=load, repository=name, tag=tag)
         except Exception as exc:  # pylint: disable=broad-except
-            ret["comment"] = "Encountered error loading {} as {}: {}".format(
-                load, full_image, exc
-            )
+            ret["comment"] = f"Encountered error loading {load} as {full_image}: {exc}"
             return ret
         if image_info is None or image_update.get("Layers", []):
             ret["changes"] = image_update
@@ -366,9 +365,7 @@ def present(
     else:
         ret["result"] = True
         if not ret["changes"]:
-            ret["comment"] = "Image '{}' was {}, but there were no changes".format(
-                name, action
-            )
+            ret["comment"] = f"Image '{name}' was {action}, but there were no changes"
         else:
             ret["comment"] = f"Image '{full_image}' was {action}"
     return ret
@@ -442,6 +439,7 @@ def absent(name=None, images=None, force=False):
         targets = [name]
 
     to_delete = []
+    #  pylint: disable-next=possibly-used-before-assignment
     for target in targets:
         resolved_tag = __salt__["docker.resolve_tag"](target)
         if resolved_tag is not False:
@@ -460,9 +458,7 @@ def absent(name=None, images=None, force=False):
         if len(to_delete) == 1:
             ret["comment"] = f"Image {to_delete[0]} will be removed"
         else:
-            ret["comment"] = "The following images will be removed: {}".format(
-                ", ".join(to_delete)
-            )
+            ret["comment"] = "The following images will be removed: {}".format(", ".join(to_delete))
         return ret
 
     result = __salt__["docker.rmi"](*to_delete, force=force)
@@ -486,9 +482,7 @@ def absent(name=None, images=None, force=False):
         if len(to_delete) == 1:
             ret["comment"] = f"Image {to_delete[0]} was removed"
         else:
-            ret["comment"] = "The following images were removed: {}".format(
-                ", ".join(to_delete)
-            )
+            ret["comment"] = "The following images were removed: {}".format(", ".join(to_delete))
         ret["result"] = True
 
     return ret

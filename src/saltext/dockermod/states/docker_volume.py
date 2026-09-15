@@ -207,6 +207,7 @@ def absent(name, driver=None):
           docker_volume.absent
 
     """
+    del driver
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
     volume = _find_volume(name)

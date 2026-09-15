@@ -1,12 +1,15 @@
+#  pylint: disable=unrecognized-option
 """
 Unit tests for the docker state
 """
 
+from unittest.mock import Mock
+from unittest.mock import patch
+
 import pytest
 
-import salt.modules.dockermod as docker_mod
-import salt.states.docker_volume as docker_state
-from tests.support.mock import Mock, patch
+import saltext.dockermod as docker_mod
+import saltext.dockermod.states.docker_volume as docker_state
 
 
 @pytest.fixture
@@ -24,6 +27,7 @@ def test_present():
     volumes = []
     default_driver = "dummy_default"
 
+    #  pylint: disable-next=unused-argument
     def create_volume(name, driver=None, driver_opts=None):
         for v in volumes:
             assert v["Name"] != name
@@ -47,9 +51,7 @@ def test_present():
     }
     with patch.dict(docker_state.__dict__, {"__salt__": __salt__}):
         ret = docker_state.present("volume_foo")
-        docker_create_volume.assert_called_with(
-            "volume_foo", driver=None, driver_opts=None
-        )
+        docker_create_volume.assert_called_with("volume_foo", driver=None, driver_opts=None)
         assert ret == {
             "name": "volume_foo",
             "comment": "",
@@ -110,9 +112,7 @@ def test_present_with_another_driver():
     __salt__ = {
         "docker.create_volume": docker_create_volume,
         "docker.remove_volume": docker_remove_volume,
-        "docker.volumes": Mock(
-            return_value={"Volumes": [{"Name": "volume_foo", "Driver": "foo"}]}
-        ),
+        "docker.volumes": Mock(return_value={"Volumes": [{"Name": "volume_foo", "Driver": "foo"}]}),
     }
     with patch.dict(docker_state.__dict__, {"__salt__": __salt__}):
         ret = docker_state.present(
@@ -121,9 +121,7 @@ def test_present_with_another_driver():
             force=True,
         )
     docker_remove_volume.assert_called_with("volume_foo")
-    docker_create_volume.assert_called_with(
-        "volume_foo", driver="bar", driver_opts=None
-    )
+    docker_create_volume.assert_called_with("volume_foo", driver="bar", driver_opts=None)
     assert ret == {
         "name": "volume_foo",
         "comment": "",
@@ -149,9 +147,7 @@ def test_present_wo_existing_volumes():
             driver="bar",
             force=True,
         )
-    docker_create_volume.assert_called_with(
-        "volume_foo", driver="bar", driver_opts=None
-    )
+    docker_create_volume.assert_called_with("volume_foo", driver="bar", driver_opts=None)
     assert ret == {
         "name": "volume_foo",
         "comment": "",

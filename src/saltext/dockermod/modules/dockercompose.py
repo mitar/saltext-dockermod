@@ -1,3 +1,4 @@
+#  pylint: disable=unrecognized-option
 """
 Module to import docker-compose via saltstack
 
@@ -129,11 +130,11 @@ import inspect
 import logging
 import os
 import re
-import yaml
 from operator import attrgetter
 
 import salt.utils.files
 import salt.utils.stringutils
+import yaml
 from salt.serializers import json
 
 try:
@@ -161,6 +162,7 @@ MIN_DOCKERCOMPOSE = (1, 5, 0)
 VERSION_RE = r"([\d.]+)"
 
 log = logging.getLogger(__name__)
+#  pylint: disable-next=invalid-name
 debug = False
 
 __virtualname__ = "dockercompose"
@@ -193,9 +195,7 @@ def _use_python_on_whales():
     ``False`` is returned so the module falls back to the legacy ``compose``
     library instead of failing hard.
     """
-    requested = bool(
-        __salt__["config.get"]("dockercompose:use_python_on_whales", False)
-    )
+    requested = bool(__salt__["config.get"]("dockercompose:use_python_on_whales", False))
     if not requested:
         return False
     if not HAS_PYTHON_ON_WHALES:
@@ -252,9 +252,7 @@ def __read_docker_compose_file(file_path):
     :return:
     """
     if not os.path.isfile(file_path):
-        return __standardize_result(
-            False, f"Path {file_path} is not present", None, None
-        )
+        return __standardize_result(False, f"Path {file_path} is not present", None, None)
     try:
         with salt.utils.files.fopen(file_path, "r") as fl:
             file_name = os.path.basename(file_path)
@@ -284,7 +282,7 @@ def __load_docker_compose(path):
         )
     try:
         with salt.utils.files.fopen(file_path, "r") as fl:
-            loaded = yaml.load(fl)
+            loaded = yaml.safe_load(fl)
     except OSError:
         return (
             None,
@@ -330,6 +328,7 @@ def __write_docker_compose(path, docker_compose, already_existed):
 
     :return:
     """
+    del already_existed
     if path.lower().endswith((".yml", ".yaml")):
         file_path = path
         dir_name = os.path.dirname(path)
@@ -372,6 +371,7 @@ def __load_project_from_file_path(file_path):
     :return:
     """
     if _use_python_on_whales():
+        #  pylint: disable-next=import-error,import-outside-toplevel
         from python_on_whales import DockerClient
 
         project = DockerClient(compose_files=[file_path])
@@ -410,7 +410,7 @@ def __load_compose_definitions(path, definition):
             return None, None, __standardize_result(False, msg, None, None)
     else:
         try:
-            loaded_definition = yaml.load(definition)
+            loaded_definition = yaml.safe_load(definition)
         except yaml.YAMLError as yerr:
             msg = f"Could not parse {definition} {yerr}"
             return None, None, __standardize_result(False, msg, None, None)
@@ -426,14 +426,10 @@ def __dump_compose_file(path, compose_result, success_msg, already_existed):
     :param success_msg: the message to give upon success
     :return:
     """
-    ret = __dump_docker_compose(
-        path, compose_result["compose_content"], already_existed
-    )
+    ret = __dump_docker_compose(path, compose_result["compose_content"], already_existed)
     if isinstance(ret, dict):
         return ret
-    return __standardize_result(
-        True, success_msg, compose_result["compose_content"], None
-    )
+    return __standardize_result(True, success_msg, compose_result["compose_content"], None)
 
 
 def __handle_except(inst):
@@ -464,7 +460,8 @@ def _get_convergence_plans(project, service_names):
         project.get_services(service_names), ConvergenceStrategy.changed
     )
     for cont in plans:
-        (action, container) = plans[cont]
+        #  pylint: disable-next=unused-variable
+        action, container = plans[cont]
         if action == "create":
             ret[cont] = "Creating container"
         elif action == "recreate":
@@ -682,18 +679,13 @@ def restart(path, service_names=None):
                 project.restart(service_names)
                 if debug:
                     for container in project.containers():
-                        if (
-                            service_names is None
-                            or container.get("Name")[1:] in service_names
-                        ):
+                        if service_names is None or container.get("Name")[1:] in service_names:
                             container.inspect_if_not_inspected()
                             debug_ret[container.get("Name")] = container.inspect()
                             result[container.get("Name")] = "restarted"
         except Exception as inst:  # pylint: disable=broad-except
             return __handle_except(inst)
-    return __standardize_result(
-        True, "Restarting containers via docker-compose", result, debug_ret
-    )
+    return __standardize_result(True, "Restarting containers via docker-compose", result, debug_ret)
 
 
 def stop(path, service_names=None):
@@ -732,18 +724,13 @@ def stop(path, service_names=None):
                 project.stop(service_names)
                 if debug:
                     for container in project.containers(stopped=True):
-                        if (
-                            service_names is None
-                            or container.get("Name")[1:] in service_names
-                        ):
+                        if service_names is None or container.get("Name")[1:] in service_names:
                             container.inspect_if_not_inspected()
                             debug_ret[container.get("Name")] = container.inspect()
                             result[container.get("Name")] = "stopped"
         except Exception as inst:  # pylint: disable=broad-except
             return __handle_except(inst)
-    return __standardize_result(
-        True, "Stopping containers via docker-compose", result, debug_ret
-    )
+    return __standardize_result(True, "Stopping containers via docker-compose", result, debug_ret)
 
 
 def pause(path, service_names=None):
@@ -782,18 +769,13 @@ def pause(path, service_names=None):
                 project.pause(service_names)
                 if debug:
                     for container in project.containers():
-                        if (
-                            service_names is None
-                            or container.get("Name")[1:] in service_names
-                        ):
+                        if service_names is None or container.get("Name")[1:] in service_names:
                             container.inspect_if_not_inspected()
                             debug_ret[container.get("Name")] = container.inspect()
                             result[container.get("Name")] = "paused"
         except Exception as inst:  # pylint: disable=broad-except
             return __handle_except(inst)
-    return __standardize_result(
-        True, "Pausing containers via docker-compose", result, debug_ret
-    )
+    return __standardize_result(True, "Pausing containers via docker-compose", result, debug_ret)
 
 
 def unpause(path, service_names=None):
@@ -832,18 +814,13 @@ def unpause(path, service_names=None):
                 project.unpause(service_names)
                 if debug:
                     for container in project.containers():
-                        if (
-                            service_names is None
-                            or container.get("Name")[1:] in service_names
-                        ):
+                        if service_names is None or container.get("Name")[1:] in service_names:
                             container.inspect_if_not_inspected()
                             debug_ret[container.get("Name")] = container.inspect()
                             result[container.get("Name")] = "unpaused"
         except Exception as inst:  # pylint: disable=broad-except
             return __handle_except(inst)
-    return __standardize_result(
-        True, "Un-Pausing containers via docker-compose", result, debug_ret
-    )
+    return __standardize_result(True, "Un-Pausing containers via docker-compose", result, debug_ret)
 
 
 def start(path, service_names=None):
@@ -882,18 +859,13 @@ def start(path, service_names=None):
                 project.start(service_names)
                 if debug:
                     for container in project.containers():
-                        if (
-                            service_names is None
-                            or container.get("Name")[1:] in service_names
-                        ):
+                        if service_names is None or container.get("Name")[1:] in service_names:
                             container.inspect_if_not_inspected()
                             debug_ret[container.get("Name")] = container.inspect()
                             result[container.get("Name")] = "started"
         except Exception as inst:  # pylint: disable=broad-except
             return __handle_except(inst)
-    return __standardize_result(
-        True, "Starting containers via docker-compose", result, debug_ret
-    )
+    return __standardize_result(True, "Starting containers via docker-compose", result, debug_ret)
 
 
 def kill(path, service_names=None):
@@ -932,18 +904,13 @@ def kill(path, service_names=None):
                 project.kill(service_names)
                 if debug:
                     for container in project.containers(stopped=True):
-                        if (
-                            service_names is None
-                            or container.get("Name")[1:] in service_names
-                        ):
+                        if service_names is None or container.get("Name")[1:] in service_names:
                             container.inspect_if_not_inspected()
                             debug_ret[container.get("Name")] = container.inspect()
                             result[container.get("Name")] = "killed"
         except Exception as inst:  # pylint: disable=broad-except
             return __handle_except(inst)
-    return __standardize_result(
-        True, "Killing containers via docker-compose", result, debug_ret
-    )
+    return __standardize_result(True, "Killing containers via docker-compose", result, debug_ret)
 
 
 def rm(path, service_names=None):
@@ -974,9 +941,7 @@ def rm(path, service_names=None):
                 project.remove_stopped(service_names)
         except Exception as inst:  # pylint: disable=broad-except
             return __handle_except(inst)
-    return __standardize_result(
-        True, "Removing stopped containers via docker-compose", None, None
-    )
+    return __standardize_result(True, "Removing stopped containers via docker-compose", None, None)
 
 
 def ps(path):
@@ -1021,8 +986,7 @@ def ps(path):
                 )
             else:
                 containers = sorted(
-                    project.containers(None, stopped=True)
-                    + project.containers(None, one_off=True),
+                    project.containers(None, stopped=True) + project.containers(None, one_off=True),
                     key=attrgetter("name"),
                 )
             for container in containers:
@@ -1077,17 +1041,12 @@ def up(path, service_names=None):
                 ret = project.up(service_names)
                 if debug:
                     for container in ret:
-                        if (
-                            service_names is None
-                            or container.get("Name")[1:] in service_names
-                        ):
+                        if service_names is None or container.get("Name")[1:] in service_names:
                             container.inspect_if_not_inspected()
                             debug_ret[container.get("Name")] = container.inspect()
         except Exception as inst:  # pylint: disable=broad-except
             return __handle_except(inst)
-    return __standardize_result(
-        True, "Adding containers via docker-compose", result, debug_ret
-    )
+    return __standardize_result(True, "Adding containers via docker-compose", result, debug_ret)
 
 
 def service_create(path, service_name, definition):
@@ -1110,9 +1069,7 @@ def service_create(path, service_name, definition):
 
         salt myminion dockercompose.service_create /path/where/docker-compose/stored service_name definition
     """
-    compose_result, loaded_definition, err = __load_compose_definitions(
-        path, definition
-    )
+    compose_result, loaded_definition, err = __load_compose_definitions(path, definition)
     if err:
         return err
     services = compose_result["compose_content"]["services"]
@@ -1147,9 +1104,7 @@ def service_upsert(path, service_name, definition):
 
         salt myminion dockercompose.service_upsert /path/where/docker-compose/stored service_name definition
     """
-    compose_result, loaded_definition, err = __load_compose_definitions(
-        path, definition
-    )
+    compose_result, loaded_definition, err = __load_compose_definitions(path, definition)
     if err:
         return err
     services = compose_result["compose_content"]["services"]
@@ -1187,9 +1142,7 @@ def service_remove(path, service_name):
         return err
     services = compose_result["compose_content"]["services"]
     if service_name not in services:
-        return __standardize_result(
-            False, f"Service {service_name} did not exists", None, None
-        )
+        return __standardize_result(False, f"Service {service_name} did not exists", None, None)
     del services[service_name]
     return __dump_compose_file(
         path,
@@ -1223,9 +1176,7 @@ def service_set_tag(path, service_name, tag):
         return err
     services = compose_result["compose_content"]["services"]
     if service_name not in services:
-        return __standardize_result(
-            False, f"Service {service_name} did not exists", None, None
-        )
+        return __standardize_result(False, f"Service {service_name} did not exists", None, None)
     if "image" not in services[service_name]:
         return __standardize_result(
             False,

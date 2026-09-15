@@ -66,9 +66,7 @@ def start(
     """
 
     if __opts__.get("__role") == "master":
-        fire_master = salt.utils.event.get_master_event(
-            __opts__, __opts__["sock_dir"]
-        ).fire_event
+        fire_master = salt.utils.event.get_master_event(__opts__, __opts__["sock_dir"]).fire_event
     else:
         fire_master = None
 
@@ -92,9 +90,7 @@ def start(
     try:
         events = client.events(filters=filters)
         for event in events:
-            data = salt.utils.json.loads(
-                event.decode(__salt_system_encoding__, errors="replace")
-            )
+            data = salt.utils.json.loads(event.decode(__salt_system_encoding__, errors="replace"))
             # https://github.com/docker/cli/blob/master/cli/command/system/events.go#L109
             # https://github.com/docker/engine-api/blob/master/types/events/events.go
             # Each output includes the event type, actor id, name and action.

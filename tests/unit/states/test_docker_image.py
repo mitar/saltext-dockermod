@@ -1,12 +1,15 @@
+#  pylint: disable=unrecognized-option
 """
 Unit tests for the docker state
 """
 
+from unittest.mock import MagicMock
+from unittest.mock import patch
+
 import pytest
 
-import salt.modules.dockermod as docker_mod
-import salt.states.docker_image as docker_state
-from tests.support.mock import MagicMock, patch
+import saltext.dockermod as docker_mod
+import saltext.dockermod.states.docker_image as docker_state
 
 
 @pytest.fixture

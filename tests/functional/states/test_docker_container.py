@@ -1,34 +1,34 @@
+#  pylint: disable=unrecognized-option
 """
 Integration tests for the docker_container states
 """
 
 import logging
-import os
 import random
 import shutil
 import subprocess
+from pathlib import Path
 
 import attr
 import pytest
-from saltfactories.utils import random_string
-
 import salt.utils.files
 import salt.utils.network
 import salt.utils.path
 from salt._compat import ipaddress
 from salt.exceptions import CommandExecutionError
 from salt.modules.config import DEFAULTS as _config_defaults
-from tests.support.runtests import RUNTIME_VARS
+from saltfactories.utils import random_string
 
 log = logging.getLogger(__name__)
+
+# The file_roots of this repository's integration test files
+BASE_FILES = Path(__file__).parents[2] / "integration" / "files" / "file" / "base"
 
 pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skip_on_freebsd(reason="No Docker on FreeBSD available"),
     pytest.mark.skip_if_binaries_missing("busybox", reason="Busybox not installed"),
-    pytest.mark.skip_if_binaries_missing(
-        "docker", "dockerd", reason="Docker not installed"
-    ),
+    pytest.mark.skip_if_binaries_missing("docker", "dockerd", reason="Docker not installed"),
     pytest.mark.timeout_unless_on_windows(240),
 ]
 
@@ -57,9 +57,7 @@ class Network:
 
     @_rand_indexes.default
     def __rand_indexes(self):  # pylint: disable=unused-private-member
-        return random.sample(
-            range(2, self.net.num_addresses - 1), self.net.num_addresses - 3
-        )
+        return random.sample(range(2, self.net.num_addresses - 1), self.net.num_addresses - 3)
 
     @ip_arg.default
     def _ip_arg(self):
@@ -93,9 +91,8 @@ class Network:
         try:
             return self.net[self._rand_indexes[index]].compressed
         except (TypeError, AttributeError):
-            raise ValueError(
-                "Indexing not supported for networks without a custom subnet"
-            )
+            #  pylint: disable-next=raise-missing-from
+            raise ValueError("Indexing not supported for networks without a custom subnet")
 
     def __enter__(self):
         self.docker_exec_mod.create_network(
@@ -170,10 +167,7 @@ def docker_container(states):
 
 
 @pytest.fixture(scope="module")
-def image(grains, tmp_path_factory):
-    if grains["os"] == "VMware Photon OS" and grains["osmajorrelease"] == 5:
-        pytest.skip(f"Temporary skip on {grains['osfinger']}")
-
+def image(tmp_path_factory):
     if not salt.utils.path.which("docker"):
         # Somehow the above skip_if_binaries_missing marker for docker
         # only get's evaluated after this fixture?!?
@@ -181,7 +175,7 @@ def image(grains, tmp_path_factory):
     container_build_dir = tmp_path_factory.mktemp("busybox")
     image_name = random_string("salt-busybox-", uppercase=False)
 
-    script_path = os.path.join(RUNTIME_VARS.BASE_FILES, "mkimage-busybox-static")
+    script_path = str(BASE_FILES / "mkimage-busybox-static")
     cmd = [script_path, str(container_build_dir), image_name]
     log.debug("Running '%s' to build busybox image", " ".join(cmd))
     process = subprocess.run(
@@ -194,10 +188,9 @@ def image(grains, tmp_path_factory):
 
     log.debug("Output from mkimge-busybox-static:\n%s", process.stdout)
     if process.returncode != 0:
+        #  pylint: disable-next=broad-exception-raised
         raise Exception(
-            "Failed to build image. Output from mkimge-busybox-static:\n{}".format(
-                process.stdout
-            )
+            f"Failed to build image. Output from mkimge-busybox-static:\n{process.stdout}"
         )
 
     shutil.rmtree(str(container_build_dir))
@@ -217,6 +210,7 @@ def image(grains, tmp_path_factory):
         log.debug("Output from %s:\n%s", " ".join(cmd), process.stdout)
 
         if process.returncode != 0:
+            #  pylint: disable-next=broad-exception-raised
             raise Exception("Failed to destroy image")
 
 
@@ -279,6 +273,7 @@ def test_running_updated_image_id(docker_container, container_name, image, modul
     assert ret.result is True
     # Get the container's info
     c_info = modules.docker.inspect_container(container_name)
+    #  pylint: disable-next=unused-variable
     c_name, c_id = (c_info[x] for x in ("Name", "Id"))
     # Alter the filesystem inside the container
     assert modules.docker.retcode(container_name, "touch /.salttest") == 0
@@ -298,9 +293,7 @@ def test_running_updated_image_id(docker_container, container_name, image, modul
 
 
 @pytest.mark.slow_test
-def test_running_start_false_without_replace(
-    docker_container, container_name, image, modules
-):
+def test_running_start_false_without_replace(docker_container, container_name, image, modules):
     """
     Test that we do not start a container which is stopped, when it is not
     being replaced.
@@ -326,9 +319,7 @@ def test_running_start_false_without_replace(
 
 
 @pytest.mark.slow_test
-def test_running_no_changes_hostname_network(
-    docker_container, container_name, image, network
-):
+def test_running_no_changes_hostname_network(docker_container, container_name, image, network):
     """
     Test that changes are not detected when a hostname is specified for a container
     on a custom network
@@ -353,9 +344,7 @@ def test_running_no_changes_hostname_network(
 
 
 @pytest.mark.slow_test
-def test_running_start_false_with_replace(
-    docker_container, container_name, image, modules
-):
+def test_running_start_false_with_replace(docker_container, container_name, image, modules):
     """
     Test that we do start a container which was previously stopped, even
     though start=False, because the container was replaced.
@@ -457,9 +446,7 @@ def test_running_with_argument_collision(docker_container, container_name, image
 
 
 @pytest.mark.slow_test
-def test_running_with_ignore_collisions(
-    docker_container, container_name, image, modules
-):
+def test_running_with_ignore_collisions(docker_container, container_name, image, modules):
     """
     This tests that the input tranlation code identifies an argument
     collision (API args and their aliases being simultaneously used)
@@ -486,9 +473,7 @@ def test_running_with_ignore_collisions(
 
 
 @pytest.mark.slow_test
-def test_running_with_removed_argument(
-    docker_container, container_name, image, modules
-):
+def test_running_with_removed_argument(docker_container, container_name, image, modules):
     """
     This tests that removing an argument from a created container will
     be detected and result in the container being replaced.
@@ -511,9 +496,7 @@ def test_running_with_removed_argument(
     # Now check to ensure that the changes include the command
     # reverting back to the image's command.
     image_info = modules.docker.inspect_image(image)
-    assert (
-        ret.changes["container"]["Config"]["Cmd"]["new"] == image_info["Config"]["Cmd"]
-    )
+    assert ret.changes["container"]["Config"]["Cmd"]["new"] == image_info["Config"]["Cmd"]
 
 
 @pytest.mark.slow_test
@@ -548,9 +531,7 @@ def test_running_with_port_bindings(docker_container, container_name, image, mod
 
 
 @pytest.mark.slow_test
-def test_absent_with_stopped_container(
-    docker_container, container_name, image, modules
-):
+def test_absent_with_stopped_container(docker_container, container_name, image, modules):
     """
     This tests the docker_container.absent state on a stopped container
     """
@@ -598,9 +579,7 @@ def test_absent_with_running_container(docker_container, container_name, image):
     # Nothing should have changed
     assert ret.changes == {}
     # Ensure that the comment states that force=True is required
-    assert (
-        ret.comment == "Container is running, set force to True to forcibly remove it"
-    )
+    assert ret.comment == "Container is running, set force to True to forcibly remove it"
 
     # Try again with force=True. This should succeed.
     ret = docker_container.absent(
@@ -655,9 +634,7 @@ def test_env_with_running_container(docker_container, container_name, image, mod
 
 
 @pytest.mark.slow_test
-def test_static_ip_one_network(
-    docker_container, container_name, image, modules, network
-):
+def test_static_ip_one_network(docker_container, container_name, image, modules, network):
     """
     Ensure that if a network is created and specified as network_mode, that is the only network, and
     the static IP is applied.
@@ -683,6 +660,7 @@ def test_static_ip_one_network(
         assert connected_networks[net.name]["IPAMConfig"]["IPv4Address"] == requested_ip
 
 
+#  pylint: disable-next=unused-argument
 def _test_running(docker_container, container_name, image, modules, *nets):
     """
     DRY function for testing static IPs
@@ -693,16 +671,19 @@ def _test_running(docker_container, container_name, image, modules, *nets):
 @pytest.mark.parametrize(
     "subnets",
     [
+        #  pylint: disable-next=use-dict-literal
         (dict(subnet="10.247.197.96/27"),),
+        #  pylint: disable-next=use-dict-literal
         (dict(subnet="10.247.197.128/27"), dict(subnet="10.247.197.96/27")),
+        #  pylint: disable-next=use-dict-literal
         (dict(subnet="fe3f:2180:26:1::/123"),),
+        #  pylint: disable-next=use-dict-literal
         (dict(subnet="fe3f:2180:26:1::20/123"), dict(subnet="fe3f:2180:26:1::/123")),
+        #  pylint: disable-next=use-dict-literal
         (dict(subnet="fe3f:2180:26:1::/123"), dict(subnet="10.247.197.96/27")),
     ],
 )
-def test_running_networks(
-    docker_container, container_name, image, subnets, networks, modules
-):
+def test_running_networks(docker_container, container_name, image, subnets, networks, modules):
 
     netdefs = []
     for subnet in subnets:
@@ -730,10 +711,7 @@ def test_running_networks(
         # Check that the correct IP was set
         try:
             for net in networks.nets:
-                assert (
-                    connected_networks[net.name]["IPAMConfig"][net.arg_map(net.ip_arg)]
-                    == net[0]
-                )
+                assert connected_networks[net.name]["IPAMConfig"][net.arg_map(net.ip_arg)] == net[0]
         except KeyError:
             # Fail with a meaningful error
             msg = "Container does not have the expected network config for network {}".format(
@@ -785,9 +763,9 @@ def test_running_networks(
                     networks.nets[-1].name: {
                         "IPAMConfig": {
                             "old": {
-                                networks.nets[-1].arg_map(
-                                    networks.nets[-1].ip_arg
-                                ): networks.nets[-1][1]
+                                networks.nets[-1].arg_map(networks.nets[-1].ip_arg): networks.nets[
+                                    -1
+                                ][1]
                             },
                             "new": None,
                         }
@@ -817,9 +795,7 @@ def test_running_networks(
             .get("Networks", {})[networks.nets[-1].name]
         )
         autoip_keys = _config_defaults["docker.compare_container_networks"]["automatic"]
-        autoip_config = {
-            x: y for x, y in container_netinfo.items() if x in autoip_keys and y
-        }
+        autoip_config = {x: y for x, y in container_netinfo.items() if x in autoip_keys and y}
 
         expected = {"container": {"Networks": {networks.nets[-1].name: {}}}}
         for key, val in autoip_config.items():
@@ -855,9 +831,7 @@ def test_running_networks(
         assert ret.comment == expected
 
 
-def test_running_explicit_networks(
-    docker_container, container_name, image, modules, network
-):
+def test_running_explicit_networks(docker_container, container_name, image, modules, network):
     """
     Ensure that if we use an explicit network configuration, we remove any
     default networks not specified (e.g. the default "bridge" network).
@@ -887,14 +861,11 @@ def test_running_explicit_networks(
         assert ret.result is True
         net_changes = ret.changes["container"]["Networks"]
 
-        assert (
-            f"Container '{container_name}' is already configured as specified."
-            in ret.comment
-        )
+        assert f"Container '{container_name}' is already configured as specified." in ret.comment
 
-        updated_networks = modules.docker.inspect_container(container_name)[
-            "NetworkSettings"
-        ]["Networks"]
+        updated_networks = modules.docker.inspect_container(container_name)["NetworkSettings"][
+            "Networks"
+        ]
 
         for default_network in default_networks:
             assert f"Disconnected from network '{default_network}'." in ret.comment
@@ -995,9 +966,7 @@ def test_run_with_unless(docker_container, container_name, image, modules):
         modules.docker.rm(container_name, force=True)
 
 
-def test_run_with_creates(
-    docker_container, container_name, image, tmp_path, subtests, modules
-):
+def test_run_with_creates(docker_container, container_name, image, tmp_path, subtests, modules):
     """
     Test docker_container.run with creates. The container should not run
     (and the state should return a True result) if all of the files exist,

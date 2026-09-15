@@ -9,4 +9,5 @@ _________________
 .. autosummary::
     :toctree:
 
+    dockercompose
     dockermod

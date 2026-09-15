@@ -1,3 +1,4 @@
+#  pylint: disable=unrecognized-option
 """
 Management of Docker networks
 
@@ -35,6 +36,8 @@ import logging
 import random
 import string
 
+import salt.utils.args
+import salt.utils.dockermod.__init__
 import salt.utils.dockermod.translate.network
 from salt._compat import ipaddress
 from salt.exceptions import CommandExecutionError
@@ -64,6 +67,7 @@ def _normalize_pools(existing, desired):
 
     for pool in desired["Config"]:
         subnet = ipaddress.ip_network(pool.get("Subnet"))
+        #  pylint: disable-next=no-else-raise
         if pools["desired"][subnet.version] is not None:
             raise ValueError(f"Only one IPv{subnet.version} pool is permitted")
         else:
@@ -76,12 +80,8 @@ def _normalize_pools(existing, desired):
         )
 
     # The pools will be sorted when comparing
-    existing["Config"] = [
-        pools["existing"][x] for x in (4, 6) if pools["existing"][x] is not None
-    ]
-    desired["Config"] = [
-        pools["desired"][x] for x in (4, 6) if pools["desired"][x] is not None
-    ]
+    existing["Config"] = [pools["existing"][x] for x in (4, 6) if pools["existing"][x] is not None]
+    desired["Config"] = [pools["desired"][x] for x in (4, 6) if pools["desired"][x] is not None]
 
 
 def present(
@@ -142,7 +142,7 @@ def present(
         .. versionadded:: 2018.3.0
 
     .. _`docker-py Low-level API`: http://docker-py.readthedocs.io/en/stable/api.html#docker.api.container.ContainerApiMixin.create_container
-    .. _`Docker Engine API`: https://docs.docker.com/engine/api/v1.33/#operation/ContainerCreate
+    .. _`Docker Engine API`: https://docs.docker.com/reference/api/engine/version/v1.56/
 
     ignore_collisions : False
         Since many of docker-py's arguments differ in name from their CLI
@@ -535,7 +535,7 @@ def present(
     to_connect = {}
     missing_containers = []
     stopped_containers = []
-    for cname in __utils__["args.split_input"](containers or []):
+    for cname in salt.utils.args.split_input(containers or []):
         try:
             cinfo = __salt__["docker.inspect_container"](cname)
         except CommandExecutionError:
@@ -553,16 +553,12 @@ def present(
 
     if missing_containers:
         ret.setdefault("warnings", []).append(
-            "The following containers do not exist: {}.".format(
-                ", ".join(missing_containers)
-            )
+            "The following containers do not exist: {}.".format(", ".join(missing_containers))
         )
 
     if stopped_containers:
         ret.setdefault("warnings", []).append(
-            "The following containers are not running: {}.".format(
-                ", ".join(stopped_containers)
-            )
+            "The following containers are not running: {}.".format(", ".join(stopped_containers))
         )
 
     # We might disconnect containers in the process of recreating the network,
@@ -570,12 +566,12 @@ def present(
     disconnected_containers = {}
 
     try:
-        kwargs = __utils__["docker.translate_input"](
+        kwargs = salt.utils.dockermod.__init__.translate_input(
             salt.utils.dockermod.translate.network,
             skip_translate=skip_translate,
             ignore_collisions=ignore_collisions,
             validate_ip_addrs=validate_ip_addrs,
-            **__utils__["args.clean_kwargs"](**kwargs),
+            **salt.utils.args.clean_kwargs(**kwargs),
         )
     except Exception as exc:  # pylint: disable=broad-except
         ret["comment"] = str(exc)
@@ -584,9 +580,7 @@ def present(
     # Separate out the IPAM config options and build the IPAM config dict
     ipam_kwargs = {}
     ipam_kwarg_names = ["ipam", "ipam_driver", "ipam_opts", "ipam_pools"]
-    ipam_kwarg_names.extend(
-        __salt__["docker.get_client_args"]("ipam_config")["ipam_config"]
-    )
+    ipam_kwarg_names.extend(__salt__["docker.get_client_args"]("ipam_config")["ipam_config"])
     for key in ipam_kwarg_names:
         try:
             ipam_kwargs[key] = kwargs.pop(key)
@@ -603,7 +597,7 @@ def present(
     else:
         ipam_pools = ipam_kwargs.pop("ipam_pools", ())
         try:
-            ipam_config = __utils__["docker.create_ipam_config"](
+            ipam_config = salt.utils.dockermod.__init__.create_ipam_config(
                 *ipam_pools, **ipam_kwargs
             )
         except Exception as exc:  # pylint: disable=broad-except
@@ -619,14 +613,10 @@ def present(
 
         # Set the comment now to say that it already exists, if we need to
         # recreate the network with new config we'll update the comment later.
-        ret["comment"] = (
-            f"Network '{name}' already exists, and is configured as specified"
-        )
+        ret["comment"] = f"Network '{name}' already exists, and is configured as specified"
         log.trace("Details of docker network '%s': %s", name, network)
 
-        temp_net_name = "".join(
-            random.choice(string.ascii_lowercase) for _ in range(20)
-        )
+        temp_net_name = "".join(random.choice(string.ascii_lowercase) for _ in range(20))
 
         try:
             # When using enable_ipv6, you *must* provide a subnet. But we don't
@@ -661,9 +651,7 @@ def present(
                 **kwargs_tmp,
             )
         except CommandExecutionError as exc:
-            ret["comment"] = "Failed to create temp network for comparison: {}".format(
-                str(exc)
-            )
+            ret["comment"] = f"Failed to create temp network for comparison: {str(exc)}"
             return ret
         else:
             # Replace the value so we can use it later
@@ -759,9 +747,7 @@ def present(
                                 if net_links:
                                     disconnected_containers[cid]["Links"] = net_links
                                 if net_aliases:
-                                    disconnected_containers[cid][
-                                        "Aliases"
-                                    ] = net_aliases
+                                    disconnected_containers[cid]["Aliases"] = net_aliases
                             except (CommandExecutionError, KeyError, ValueError):
                                 continue
 
@@ -848,13 +834,9 @@ def present(
                         continue
                     else:
                         if key_name.endswith("Address"):
-                            connect_kwargs[arg_name] = connect_kwargs[arg_name].rsplit(
-                                "/", 1
-                            )[0]
+                            connect_kwargs[arg_name] = connect_kwargs[arg_name].rsplit("/", 1)[0]
             try:
-                __salt__["docker.connect_container_to_network"](
-                    cid, name, **connect_kwargs
-                )
+                __salt__["docker.connect_container_to_network"](cid, name, **connect_kwargs)
             except CommandExecutionError as exc:
                 if not connect_kwargs:
                     errors.append(str(exc))
@@ -867,11 +849,7 @@ def present(
                         errors.append(str(exc))
                     else:
                         ret["changes"].setdefault(
-                            (
-                                "reconnected"
-                                if cid in disconnected_containers
-                                else "connected"
-                            ),
+                            ("reconnected" if cid in disconnected_containers else "connected"),
                             [],
                         ).append(connect_info["Name"])
             else:

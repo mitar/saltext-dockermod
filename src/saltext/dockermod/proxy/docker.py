@@ -55,6 +55,7 @@ def init(opts):
     """
     Always initialize
     """
+    del opts
     __context__["initialized"] = True
 
 
@@ -69,4 +70,5 @@ def shutdown(opts):
     """
     Nothing needs to be done to shutdown
     """
+    del opts
     __context__["initialized"] = False

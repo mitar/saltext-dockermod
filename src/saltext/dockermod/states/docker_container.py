@@ -1,3 +1,4 @@
+#  pylint: disable=unrecognized-option
 """
 Management of Docker containers
 
@@ -121,9 +122,7 @@ def _parse_networks(networks):
         # being passed when connecting to the network will not be dictlists.
         networks = salt.utils.data.repack_dictlist(networks)
         if not networks:
-            raise CommandExecutionError(
-                "Invalid network configuration (see documentation)"
-            )
+            raise CommandExecutionError("Invalid network configuration (see documentation)")
         for net_name, net_conf in networks.items():
             if net_conf is None:
                 networks[net_name] = {}
@@ -158,20 +157,15 @@ def _parse_networks(networks):
 
     if networks:
         try:
-            all_networks = [
-                x["Name"] for x in __salt__["docker.networks"]() if "Name" in x
-            ]
+            all_networks = [x["Name"] for x in __salt__["docker.networks"]() if "Name" in x]
         except CommandExecutionError as exc:
-            raise CommandExecutionError(
-                f"Failed to get list of existing networks: {exc}."
-            )
+            #  pylint: disable-next=raise-missing-from
+            raise CommandExecutionError(f"Failed to get list of existing networks: {exc}.")
         else:
             missing_networks = [x for x in sorted(networks) if x not in all_networks]
             if missing_networks:
                 raise CommandExecutionError(
-                    "The following networks are not present: {}".format(
-                        ", ".join(missing_networks)
-                    )
+                    "The following networks are not present: {}".format(", ".join(missing_networks))
                 )
 
     return networks
@@ -192,6 +186,7 @@ def _resolve_image(ret, image, client_timeout):
                     client_timeout=client_timeout,
                 )
             except Exception as exc:  # pylint: disable=broad-except
+                #  pylint: disable-next=raise-missing-from
                 raise CommandExecutionError(f"Failed to pull {image}: {exc}")
             else:
                 ret["changes"]["image"] = pull_result
@@ -295,7 +290,7 @@ def running(
 
     .. _docker-py: https://pypi.python.org/pypi/docker-py
     .. _`docker-py Low-level API`: http://docker-py.readthedocs.io/en/stable/api.html#docker.api.container.ContainerApiMixin.create_container
-    .. _`Docker Engine API`: https://docs.docker.com/engine/api/v1.33/#operation/ContainerCreate
+    .. _`Docker Engine API`: https://docs.docker.com/reference/api/engine/version/v1.56/
 
     ignore_collisions : False
         Since many of docker-py_'s arguments differ in name from their CLI
@@ -1444,7 +1439,7 @@ def running(
 
         .. note::
             See the documentation for security_opt at
-            https://docs.docker.com/engine/reference/run/#security-configuration
+            https://docs.docker.com/reference/compose-file/services/#security_opt
 
     shm_size
         Size of /dev/shm
@@ -1737,9 +1732,7 @@ def running(
         elif current_image_id != image_id:
             ret["changes"]["image"] = {"old": current_image_id, "new": image_id}
         comments.append(
-            "Container '{}' would be {}".format(
-                name, "created" if not exists else "replaced"
-            )
+            "Container '{}' would be {}".format(name, "created" if not exists else "replaced")
         )
         return _format_comments(ret, comments)
 
@@ -1785,9 +1778,9 @@ def running(
         rm_kwargs = {"stop": True}
         if shutdown_timeout is not None:
             rm_kwargs["timeout"] = shutdown_timeout
-        ret["changes"].setdefault("container_id", {})["removed"] = __salt__[
-            "docker.rm"
-        ](name, **rm_kwargs)
+        ret["changes"].setdefault("container_id", {})["removed"] = __salt__["docker.rm"](
+            name, **rm_kwargs
+        )
         try:
             result = __salt__["docker.rename"](new, orig)
         except CommandExecutionError as exc:
@@ -1836,9 +1829,9 @@ def running(
             # argument is used, the parsed networks will be an empty list, so
             # it's not sufficient to do a boolean check on the "networks"
             # variable.
-            extra_nets = set(
-                post_net_connect.get("NetworkSettings", {}).get("Networks", {})
-            ) - set(networks)
+            extra_nets = set(post_net_connect.get("NetworkSettings", {}).get("Networks", {})) - set(
+                networks
+            )
 
             if extra_nets:
                 for extra_net in extra_nets:
@@ -1847,9 +1840,7 @@ def running(
                     )
 
                 # We've made changes, so we need to inspect the container again
-                post_net_connect = __salt__["docker.inspect_container"](
-                    temp_container_name
-                )
+                post_net_connect = __salt__["docker.inspect_container"](temp_container_name)
 
         net_changes = __salt__["docker.compare_container_networks"](
             pre_net_connect, post_net_connect
@@ -1897,18 +1888,14 @@ def running(
                     if not _replace(name, temp_container_name):
                         ret["result"] = False
                         return _format_comments(ret, comments)
-                    ret["changes"].setdefault("container_id", {})["added"] = (
-                        temp_container["Id"]
-                    )
+                    ret["changes"].setdefault("container_id", {})["added"] = temp_container["Id"]
             else:
                 # No changes between existing container and temp container.
                 # First check if a requisite is asking to send a signal to the
                 # existing container.
                 if send_signal:
                     if __opts__["test"]:
-                        comments.append(
-                            f"Signal {watch_action} would be sent to container"
-                        )
+                        comments.append(f"Signal {watch_action} would be sent to container")
                     else:
                         try:
                             __salt__["docker.signal"](name, signal=watch_action)
@@ -1935,9 +1922,7 @@ def running(
                     # Container was not replaced, no differences between the
                     # existing container and the temp container were detected,
                     # and no signal was sent to the container.
-                    comments.append(
-                        f"Container '{name}' is already configured as specified"
-                    )
+                    comments.append(f"Container '{name}' is already configured as specified")
 
         if net_changes:
             ret["changes"].setdefault("container", {})["Networks"] = net_changes
@@ -1954,9 +1939,7 @@ def running(
                     disconnected = connected = False
                     try:
                         if name in __salt__["docker.connected"](net_name):
-                            __salt__["docker.disconnect_container_from_network"](
-                                name, net_name
-                            )
+                            __salt__["docker.disconnect_container_from_network"](name, net_name)
                             disconnected = True
                     except CommandExecutionError as exc:
                         errors.append(str(exc))
@@ -1987,9 +1970,9 @@ def running(
                         comments.extend(errors)
                         network_failure = True
 
-                    ret["changes"].setdefault("container", {}).setdefault(
-                        "Networks", {}
-                    )[net_name] = net_changes[net_name]
+                    ret["changes"].setdefault("container", {}).setdefault("Networks", {})[
+                        net_name
+                    ] = net_changes[net_name]
 
                     if disconnected and connected:
                         comments.append(
@@ -2054,14 +2037,14 @@ def running(
         def _get_nets():
             if contextkey not in __context__:
                 new_container_info = __salt__["docker.inspect_container"](name)
-                __context__[contextkey] = new_container_info.get(
-                    "NetworkSettings", {}
-                ).get("Networks", {})
+                __context__[contextkey] = new_container_info.get("NetworkSettings", {}).get(
+                    "Networks", {}
+                )
             return __context__[contextkey]
 
-        autoip_keys = __salt__["config.option"](
-            "docker.compare_container_networks"
-        ).get("automatic", [])
+        autoip_keys = __salt__["config.option"]("docker.compare_container_networks").get(
+            "automatic", []
+        )
         for net_name, net_changes in (
             ret["changes"].get("container", {}).get("Networks", {}).items()
         ):
@@ -2220,9 +2203,7 @@ def run(
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Container would be run{}".format(
-            " in the background" if bg else ""
-        )
+        ret["comment"] = "Container would be run{}".format(" in the background" if bg else "")
         return ret
 
     if bg:
@@ -2245,9 +2226,7 @@ def run(
             if remove is not None:
                 if not ignore_collisions:
                     ret["result"] = False
-                    ret["comment"] = (
-                        "'rm' is an alias for 'auto_remove', they cannot both be used"
-                    )
+                    ret["comment"] = "'rm' is an alias for 'auto_remove', they cannot both be used"
                     return ret
             else:
                 remove = bool(val)
@@ -2284,10 +2263,9 @@ def run(
             except KeyError:
                 pass
             else:
+                #  pylint: disable-next=simplifiable-if-expression
                 ret["result"] = False if failhard and retcode != 0 else True
-                ret["comment"] = (
-                    f"Container ran and exited with a return code of {retcode}"
-                )
+                ret["comment"] = f"Container ran and exited with a return code of {retcode}"
 
     if remove:
         id_ = ret.get("changes", {}).get("Id")
@@ -2295,14 +2273,13 @@ def run(
             try:
                 __salt__["docker.rm"](ret["changes"]["Id"])
             except CommandExecutionError as exc:
-                ret.setdefault("warnings", []).append(
-                    f"Failed to auto_remove container: {exc}"
-                )
+                ret.setdefault("warnings", []).append(f"Failed to auto_remove container: {exc}")
 
     return ret
 
 
 def stopped(
+    #  pylint: disable-next=unused-argument
     name=None,
     containers=None,
     shutdown_timeout=None,
@@ -2389,17 +2366,13 @@ def stopped(
     errors = []
     if error_on_absent and "absent" in containers:
         errors.append(
-            "The following container(s) are absent: {}".format(
-                ", ".join(containers["absent"])
-            )
+            "The following container(s) are absent: {}".format(", ".join(containers["absent"]))
         )
 
     if not unpause and "paused" in containers:
         ret["result"] = False
         errors.append(
-            "The following container(s) are paused: {}".format(
-                ", ".join(containers["paused"])
-            )
+            "The following container(s) are paused: {}".format(", ".join(containers["paused"]))
         )
 
     if errors:
@@ -2422,9 +2395,7 @@ def stopped(
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "The following container(s) will be stopped: {}".format(
-            ", ".join(to_stop)
-        )
+        ret["comment"] = "The following container(s) will be stopped: {}".format(", ".join(to_stop))
         return ret
 
     stop_errors = []
@@ -2446,9 +2417,7 @@ def stopped(
         return ret
 
     ret["result"] = True
-    ret["comment"] = "The following container(s) were stopped: {}".format(
-        ", ".join(to_stop)
-    )
+    ret["comment"] = "The following container(s) were stopped: {}".format(", ".join(to_stop))
     return ret
 
 
