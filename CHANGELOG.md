@@ -9,7 +9,7 @@ This project uses [Semantic Versioning](https://semver.org/) - MAJOR.MINOR.PATCH
 
 ### Fixed
 
-- Add docker source files that were missed when creating the dockermod extension. [#6](https://bugzilla.opensuse.org/6)
+- Add docker source files that were missed when creating the dockermod extension. [#6](https://github.com/salt-extensions/saltext-dockermod/issues/6)
 
 ## v0.1.1 (2026-03-05)
 

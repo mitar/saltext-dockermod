@@ -43,7 +43,7 @@ content-type = "text/markdown"
 [project.urls]
 Homepage = "https://github.com/salt-extensions/saltext-dockermod"
 Source = "https://github.com/salt-extensions/saltext-dockermod"
-Tracker = "https://bugzilla.opensuse.org"
+Tracker = "https://github.com/salt-extensions/saltext-dockermod/issues"
 
 [project.optional-dependencies]
 changelog = ["towncrier==25.8.0"]
@@ -128,7 +128,7 @@ directory = "changelog/"
 start_string = "# Changelog\n"
 underlines = ["", "", ""]
 title_format = "## {version} ({project_date})"
-issue_format = "[#{issue}](https://bugzilla.opensuse.org/{issue})"
+issue_format = "[#{issue}](https://github.com/salt-extensions/saltext-dockermod/issues/{issue})"
 
 [[tool.towncrier.type]]
 directory = "breaking"
