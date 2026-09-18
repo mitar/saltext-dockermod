@@ -4,6 +4,13 @@ This project uses [Semantic Versioning](https://semver.org/) - MAJOR.MINOR.PATCH
 
 # Changelog
 
+## 0.1.2 (2026-09-18)
+
+
+### Fixed
+
+- Add docker source files that were missed when creating the dockermod extension. [#6](https://bugzilla.opensuse.org/6)
+
 ## v0.1.1 (2026-03-05)
 
 No significant changes.
