@@ -19,6 +19,34 @@ Salt Extension for interacting with Dockermod
 
 .. toctree::
   :maxdepth: 2
+  :caption: Provided States
+  :hidden:
+
+  ref/states/index
+
+.. toctree::
+  :maxdepth: 2
+  :caption: Provided Engines
+  :hidden:
+
+  ref/engines/index
+
+.. toctree::
+  :maxdepth: 2
+  :caption: Executors
+  :hidden:
+
+  ref/executors/index
+
+.. toctree::
+  :maxdepth: 2
+  :caption: Proxy
+  :hidden:
+
+  ref/proxy/index
+
+.. toctree::
+  :maxdepth: 2
   :caption: Utils
   :hidden:
 
