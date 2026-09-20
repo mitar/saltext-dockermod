@@ -20,7 +20,8 @@ import traceback
 import salt.utils.args
 import salt.utils.path
 import salt.utils.vt
-from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.exceptions import CommandExecutionError
+from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
 
@@ -101,8 +102,8 @@ def cache_file(source):
             if not cached_source:
                 raise CommandExecutionError(f"Unable to cache {source}")
             return cached_source
-    except AttributeError:
-        raise SaltInvocationError(f"Invalid source file {source}")
+    except AttributeError as e:
+        raise SaltInvocationError(f"Invalid source file {source}") from e
     return source
 
 
@@ -135,14 +136,13 @@ def run(
 
         salt myminion container_resource.run mycontainer 'ps aux' container_type=docker exec_driver=nsenter output=stdout
     """
+    del no_start
     valid_output = ("stdout", "stderr", "retcode", "all")
     if output is None:
         cmd_func = "cmd.run"
     elif output not in valid_output:
         raise SaltInvocationError(
-            "'output' param must be one of the following: {}".format(
-                ", ".join(valid_output)
-            )
+            "'output' param must be one of the following: {}".format(", ".join(valid_output))
         )
     else:
         cmd_func = "cmd.run_all"
@@ -169,11 +169,7 @@ def run(
                 # --clear-env results in a very restrictive PATH
                 # (/bin:/usr/bin), use a good fallback.
         full_cmd += " ".join(
-            [
-                f"--set-var {x}={shlex.quote(os.environ[x])}"
-                for x in to_keep
-                if x in os.environ
-            ]
+            [f"--set-var {x}={shlex.quote(os.environ[x])}" for x in to_keep if x in os.environ]
         )
         full_cmd += f" -n {shlex.quote(name)} -- {cmd}"
     elif exec_driver == "nsenter":
@@ -313,14 +309,14 @@ def copy_to(
         raise CommandExecutionError(f"Container '{name}' is not running")
 
     local_file = cache_file(source)
-    source_dir, source_name = os.path.split(local_file)
+    _, source_name = os.path.split(local_file)
 
     # Source file sanity checks
     if not os.path.isabs(local_file):
         raise SaltInvocationError("Source path must be absolute")
-    elif not os.path.exists(local_file):
+    if not os.path.exists(local_file):
         raise SaltInvocationError(f"Source file {local_file} does not exist")
-    elif not os.path.isfile(local_file):
+    if not os.path.isfile(local_file):
         raise SaltInvocationError("Source must be a regular file")
 
     # Destination file sanity checks
@@ -334,19 +330,13 @@ def copy_to(
         # Destination was not a directory. We will check to see if the parent
         # dir is a directory, and then (if makedirs=True) attempt to create the
         # parent directory.
-        dest_dir, dest_name = os.path.split(dest)
-        if (
-            run_all(name, f"test -d {shlex.quote(dest_dir)}", **cmd_kwargs)["retcode"]
-            != 0
-        ):
+        dest_dir, _ = os.path.split(dest)
+        if run_all(name, f"test -d {shlex.quote(dest_dir)}", **cmd_kwargs)["retcode"] != 0:
             if makedirs:
-                result = run_all(
-                    name, f"mkdir -p {shlex.quote(dest_dir)}", **cmd_kwargs
-                )
+                result = run_all(name, f"mkdir -p {shlex.quote(dest_dir)}", **cmd_kwargs)
                 if result["retcode"] != 0:
-                    error = (
-                        "Unable to create destination directory {} in "
-                        "container '{}'".format(dest_dir, name)
+                    error = "Unable to create destination directory {} in " "container '{}'".format(
+                        dest_dir, name
                     )
                     if result["stderr"]:
                         error += ": {}".format(result["stderr"])
@@ -362,8 +352,7 @@ def copy_to(
         and run_all(name, f"test -e {shlex.quote(dest)}", **cmd_kwargs)["retcode"] == 0
     ):
         raise CommandExecutionError(
-            "Destination path {} already exists. Use overwrite=True to "
-            "overwrite it".format(dest)
+            "Destination path {} already exists. Use overwrite=True to " "overwrite it".format(dest)
         )
 
     # Before we try to replace the file, compare checksums.
@@ -372,9 +361,7 @@ def copy_to(
         log.debug("%s and %s:%s are the same file, skipping copy", source, name, dest)
         return True
 
-    log.debug(
-        "Copying %s to %s container '%s' as %s", source, container_type, name, dest
-    )
+    log.debug("Copying %s to %s container '%s' as %s", source, container_type, name, dest)
 
     # Using cat here instead of opening the file, reading it into memory,
     # and passing it as stdin to run(). This will keep down memory
@@ -383,19 +370,16 @@ def copy_to(
         lxcattach = "lxc-attach"
         if path:
             lxcattach += f" -P {shlex.quote(path)}"
-        copy_cmd = (
-            'cat "{0}" | {4} --clear-env --set-var {1} -n {2} -- tee "{3}"'.format(
-                local_file, PATH, name, dest, lxcattach
-            )
+        copy_cmd = 'cat "{0}" | {4} --clear-env --set-var {1} -n {2} -- tee "{3}"'.format(
+            local_file, PATH, name, dest, lxcattach
         )
     elif exec_driver == "nsenter":
         pid = __salt__[f"{container_type}.pid"](name)
-        copy_cmd = 'cat "{}" | {} env -i {} tee "{}"'.format(
-            local_file, _nsenter(pid), PATH, dest
-        )
+        copy_cmd = f'cat "{local_file}" | {_nsenter(pid)} env -i {PATH} tee "{dest}"'
     elif exec_driver == "docker-exec":
         copy_cmd = 'cat "{}" | docker exec -i {} env -i {} tee "{}"'.format(
             local_file, name, PATH, dest
         )
+    # pylint: disable-next=possibly-used-before-assignment
     __salt__["cmd.run"](copy_cmd, python_shell=True, output_loglevel="quiet")
     return source_sha256 == _get_sha256(name, dest, run_all)
