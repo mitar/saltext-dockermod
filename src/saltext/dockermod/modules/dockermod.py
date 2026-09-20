@@ -6674,7 +6674,14 @@ def _compile_state(sls_opts, mods=None):
             return errors
 
         # Compile and verify the raw chunks
-        return st_.state.compile_high_data(high_data)
+        chunks = st_.state.compile_high_data(high_data)
+        # Salt 3008 changed compile_high_data to return a (chunks, errors) tuple
+        if isinstance(chunks, tuple):
+            chunks, compile_errors = chunks
+            errors += compile_errors
+            if errors:
+                return errors
+        return chunks
 
 
 def call(name, function, *args, **kwargs):
