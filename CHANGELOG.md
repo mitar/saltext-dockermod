@@ -4,6 +4,11 @@ This project uses [Semantic Versioning](https://semver.org/) - MAJOR.MINOR.PATCH
 
 # Changelog
 
+## 0.1.3 (2026-09-21)
+
+No significant changes.
+
+
 ## 0.1.2 (2026-09-18)
 
 
