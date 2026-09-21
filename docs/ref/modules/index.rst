@@ -9,5 +9,6 @@ _________________
 .. autosummary::
     :toctree:
 
+    container_resource
     dockercompose
     dockermod
